@@ -32,8 +32,10 @@ export function AdminDashboard() {
         throw new Error('Failed to fetch data');
       }
 
-      const docsData = await docsRes.json();
-      const codesData = await codesRes.json();
+      const docsText = await docsRes.text();
+      const codesText = await codesRes.text();
+      const docsData = docsText ? JSON.parse(docsText) : [];
+      const codesData = codesText ? JSON.parse(codesText) : { codes: [] };
 
       setDocuments(docsData.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
       setAccessCodes(codesData.codes.reverse());
@@ -52,7 +54,8 @@ export function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to generate code');
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       setAccessCodes(prev => [data.code, ...prev]);
     } catch (err: any) {
       alert(err.message);

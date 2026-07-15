@@ -40,7 +40,8 @@ export function SecureAccess() {
         body: JSON.stringify({ accessCode }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (!response.ok) {
         throw new Error(data.error || 'Invalid access code');
