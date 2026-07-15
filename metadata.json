@@ -1,0 +1,8 @@
+{
+  "name": "VerifyDoc Portal",
+  "description": "Secure document verification portal for employees and administrators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
