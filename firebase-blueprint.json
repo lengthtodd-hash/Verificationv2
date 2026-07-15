@@ -1,0 +1,47 @@
+{
+  "collections": [
+    {
+      "name": "accessCodes",
+      "rules": [
+        {
+          "allow": ["read", "write"],
+          "condition": "true"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "used": { "type": "boolean" }
+        },
+        "required": ["code", "used"]
+      }
+    },
+    {
+      "name": "documents",
+      "rules": [
+        {
+          "allow": ["read", "write"],
+          "condition": "true"
+        }
+      ],
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "username": { "type": "string" },
+          "status": { "type": "string" },
+          "submittedAt": { "type": "string" },
+          "ipAddress": { "type": "string" },
+          "fullName": { "type": "string" },
+          "phoneNumber": { "type": "string" },
+          "streetAddress": { "type": "string" },
+          "zipCode": { "type": "string" },
+          "fileUrl": { "type": "string" }
+        },
+        "required": ["userId", "username", "status"]
+      }
+    }
+  ]
+}
