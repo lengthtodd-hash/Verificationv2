@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { KeyRound, Loader2 } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 export function SecureAccess() {
   const [accessCode, setAccessCode] = useState('');
@@ -34,23 +35,11 @@ export function SecureAccess() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/employee-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessCode }),
-      });
-
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Invalid access code');
-      }
-
+      const data = await api.employeeLogin(accessCode);
       login(data.token, data.user);
       navigate('/employee');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Invalid access code');
     } finally {
       setLoading(false);
     }

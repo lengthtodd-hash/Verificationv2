@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { FileText, Loader2, CheckCircle } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 export function EmployeeDashboard() {
-  const { token, logout } = useAuth();
+  const { user, logout } = useAuth();
   
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -52,23 +53,15 @@ export function EmployeeDashboard() {
             else if (id === 'stateTax') title = "State Tax Form";
 
             try {
-              const res = await fetch('/api/documents', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  title,
-                  fullName,
-                  phoneNumber,
-                  streetAddress,
-                  zipCode,
-                  fileUrl: base64String
-                })
-              });
-
-              if (!res.ok) {
+              const res = await api.submitDocument({
+                title,
+                fullName,
+                phoneNumber,
+                streetAddress,
+                zipCode,
+                fileUrl: base64String
+              }, user);
+              if (!res.success) {
                 throw new Error(`Upload failed for ${title}`);
               }
               resolve();

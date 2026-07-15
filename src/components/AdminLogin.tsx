@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { ShieldAlert, Loader2, X } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 export function AdminLogin() {
   const [username, setUsername] = useState('');
@@ -18,23 +19,11 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
+      const data = await api.adminLogin(username, password);
       login(data.token, data.user);
       navigate('/admin');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }

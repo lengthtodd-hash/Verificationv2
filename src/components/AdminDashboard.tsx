@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { KeyRound, Plus, Users, Globe, Clock, Loader2, MapPin, Hash, Phone, Map } from 'lucide-react';
+import { api } from '../lib/apiClient';
 
 export function AdminDashboard() {
   const { token } = useAuth();
@@ -19,23 +20,10 @@ export function AdminDashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [docsRes, codesRes] = await Promise.all([
-        fetch('/api/admin/documents', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch('/api/admin/access-codes', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const [docsData, codesData] = await Promise.all([
+        api.getAdminDocuments(),
+        api.getAccessCodes()
       ]);
-
-      if (!docsRes.ok || !codesRes.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const docsText = await docsRes.text();
-      const codesText = await codesRes.text();
-      const docsData = docsText ? JSON.parse(docsText) : [];
-      const codesData = codesText ? JSON.parse(codesText) : { codes: [] };
 
       setDocuments(docsData.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
       setAccessCodes(codesData.codes.reverse());
@@ -49,13 +37,7 @@ export function AdminDashboard() {
   const generateAccessCode = async () => {
     try {
       setGeneratingCode(true);
-      const res = await fetch('/api/admin/access-codes', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Failed to generate code');
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
+      const data = await api.generateAccessCode();
       setAccessCodes(prev => [data.code, ...prev]);
     } catch (err: any) {
       alert(err.message);
