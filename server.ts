@@ -27,7 +27,7 @@ app.use(express.json({ limit: "50mb" }));
 
 // Server-side cache of latest data for instant sync
 let currentDocuments: any[] = [];
-let currentCodes: string[] = [];
+let currentCodes: any[] = [];
 
 // Socket.io sync state
 io.on('connection', (socket) => {
@@ -54,11 +54,15 @@ onSnapshot(collection(firestoreDb, 'accessCodes'), (snapshot) => {
   let codeDocs: any[] = [];
   snapshot.forEach((doc) => codeDocs.push({ id: doc.id, ...doc.data() }));
   codeDocs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  let codes = codeDocs.map(c => c.id);
+  let codes = codeDocs.map(c => ({
+    code: c.id,
+    used: c.used || false,
+    createdAt: c.createdAt || new Date().toISOString()
+  }));
   
   if (codes.length === 0) {
     setDoc(doc(firestoreDb, 'accessCodes', '108026'), { code: '108026', used: false, createdAt: new Date().toISOString() });
-    codes.push('108026');
+    codes.push({ code: '108026', used: false, createdAt: new Date().toISOString() });
   }
   currentCodes = codes;
   io.emit('codes_updated', codes);
@@ -68,26 +72,38 @@ onSnapshot(collection(firestoreDb, 'accessCodes'), (snapshot) => {
 app.post("/api/employee/login", async (req: any, res: any) => {
   try {
     const { accessCode } = req.body;
-    const codeRef = doc(firestoreDb, 'accessCodes', accessCode);
-    const codeSnap = await getDoc(codeRef);
+    if (!accessCode) {
+      return res.status(400).json({ error: 'Access code is required' });
+    }
+    const code = accessCode.toString().trim();
+    console.log(`[LOGIN] Attempting login with code: "${code}"`);
+
+    const codeRef = doc(firestoreDb, 'accessCodes', code);
+    let codeSnap = await getDoc(codeRef);
     if (!codeSnap.exists()) {
-      if (accessCode === '108026') {
+      if (code === '108026') {
+        console.log(`[LOGIN] Default code "108026" not found in Firestore. Provisioning it now...`);
         await setDoc(codeRef, { code: '108026', used: false, createdAt: new Date().toISOString() });
+        codeSnap = await getDoc(codeRef);
       } else {
+        console.warn(`[LOGIN] Code "${code}" does not exist in Firestore.`);
         return res.status(400).json({ error: 'Invalid access code' });
       }
     }
-    const finalSnap = await getDoc(codeRef);
-    if (!finalSnap.exists()) {
-      return res.status(400).json({ error: 'Invalid access code' });
-    }
     
-    // Allow the code to be used multiple times on any device by not deleting it
-    const token = `token_emp_${accessCode}`;
-    const user = { id: `emp_${accessCode}`, username: `Employee (${accessCode})`, role: "employee" };
+    // Mark as used when verified, but do NOT delete so it can be reused on any device!
+    if (!codeSnap.data()?.used) {
+      console.log(`[LOGIN] Marking code "${code}" as used in Firestore.`);
+      await setDoc(codeRef, { used: true }, { merge: true });
+    } else {
+      console.log(`[LOGIN] Code "${code}" was already used. Allowing reuse.`);
+    }
+
+    const token = `token_emp_${code}`;
+    const user = { id: `emp_${code}`, username: `Employee (${code})`, role: "employee" };
     return res.json({ token, user });
   } catch (err: any) {
-    console.error(err);
+    console.error('[LOGIN] Error in employee login:', err);
     return res.status(500).json({ error: err.message });
   }
 });

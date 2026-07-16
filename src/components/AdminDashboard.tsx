@@ -7,7 +7,7 @@ export function AdminDashboard() {
   const { token } = useAuth();
   
   const [documents, setDocuments] = useState<any[]>([]);
-  const [accessCodes, setAccessCodes] = useState<string[]>([]);
+  const [accessCodes, setAccessCodes] = useState<any[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -120,18 +120,23 @@ export function AdminDashboard() {
                 <p className="text-sm text-gray-500 text-center mt-4">No codes generated.</p>
               ) : (
                 <ul className="space-y-2">
-                  {accessCodes.map(code => (
-                    <li key={code} className="text-sm font-mono bg-white px-3 py-2 border border-gray-200 rounded-md shadow-sm flex justify-between items-center">
-                      <span>{code}</span>
+                  {accessCodes.map(codeObj => (
+                    <li key={codeObj.code} className="text-sm font-mono bg-white px-3 py-2 border border-gray-200 rounded-md shadow-sm flex justify-between items-center">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                        <span className="font-bold text-gray-900">{codeObj.code}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium font-sans ${codeObj.used ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {codeObj.used ? 'Used' : 'Unused'}
+                        </span>
+                      </div>
                       <div className="flex space-x-3">
                         <button 
-                          onClick={() => navigator.clipboard.writeText(code)}
+                          onClick={() => navigator.clipboard.writeText(codeObj.code)}
                           className="text-indigo-600 hover:text-indigo-800 text-xs font-sans font-medium"
                         >
                           Copy
                         </button>
                         <button 
-                          onClick={() => handleDeleteCode(code)}
+                          onClick={() => handleDeleteCode(codeObj.code)}
                           className="text-red-600 hover:text-red-800 text-xs font-sans font-medium"
                         >
                           Delete
