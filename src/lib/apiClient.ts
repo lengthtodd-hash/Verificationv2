@@ -49,12 +49,12 @@ export const api = {
     };
   },
   
-  subscribeAccessCodes: (callback: (codes: string[]) => void) => {
+  subscribeAccessCodes: (callback: (codes: any[]) => void) => {
     // initial fetch
     fetch('/api/codes').then(res => res.json()).then(data => callback(data.codes)).catch(console.error);
     
     // listen for live updates from server
-    const handler = (codes: string[]) => callback(codes);
+    const handler = (codes: any[]) => callback(codes);
     socket.on('codes_updated', handler);
     return () => {
       socket.off('codes_updated', handler);

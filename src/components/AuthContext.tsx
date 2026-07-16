@@ -21,6 +21,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSession() {
       try {
+        // Load instantly from localStorage first to prevent blockages and handle offline states
+        const localSession = localStorage.getItem('session_data');
+        if (localSession) {
+          try {
+            const { token: sToken, user: sUser } = JSON.parse(localSession);
+            setToken(sToken);
+            setUser(sUser);
+          } catch (e) {
+            console.warn("Malformed local session data, clearing.");
+            localStorage.removeItem('session_data');
+          }
+        }
+
         const sessionId = localStorage.getItem('sessionId');
         if (sessionId) {
           const sessionRef = doc(firestoreDb, 'sessions', sessionId);
@@ -29,12 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = sessionSnap.data();
             setToken(data.token);
             setUser(data.user);
+            localStorage.setItem('session_data', JSON.stringify({ token: data.token, user: data.user }));
           } else {
             localStorage.removeItem('sessionId');
+            localStorage.removeItem('session_data');
+            setToken(null);
+            setUser(null);
           }
         }
       } catch (error) {
-        console.error("Failed to load session from Firestore:", error);
+        console.warn("Failed to load session from Firestore, relying on local session:", error);
       } finally {
         setLoading(false);
       }
@@ -43,45 +60,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (newToken: string, newUser: User) => {
+    // Optimistically update local state & local storage first so login works immediately
+    const sessionId = newUser.role === 'admin' 
+      ? 'session_admin' 
+      : `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    localStorage.setItem('sessionId', sessionId);
+    localStorage.setItem('session_data', JSON.stringify({ token: newToken, user: newUser }));
+    setToken(newToken);
+    setUser(newUser);
+
     try {
-      // For Admin, use a deterministic sessionId so their admin state can easily sync.
-      // For employees, we use a unique sessionId to differentiate sessions, but store details in Firestore.
-      const sessionId = newUser.role === 'admin' 
-        ? 'session_admin' 
-        : `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      
-      localStorage.setItem('sessionId', sessionId);
-      
       const sessionRef = doc(firestoreDb, 'sessions', sessionId);
       await setDoc(sessionRef, {
         token: newToken,
         user: newUser,
         createdAt: new Date().toISOString()
       });
-
-      setToken(newToken);
-      setUser(newUser);
     } catch (error) {
-      console.error("Failed to save session in Firestore:", error);
-      // Fallback local-only state to prevent blockages
-      setToken(newToken);
-      setUser(newUser);
+      console.warn("Failed to sync session to Firestore, but session is active locally:", error);
     }
   };
 
   const logout = async () => {
-    try {
-      const sessionId = localStorage.getItem('sessionId');
-      if (sessionId) {
+    const sessionId = localStorage.getItem('sessionId');
+    
+    // Clear local state and storage immediately
+    localStorage.removeItem('sessionId');
+    localStorage.removeItem('session_data');
+    setToken(null);
+    setUser(null);
+
+    if (sessionId) {
+      try {
         const sessionRef = doc(firestoreDb, 'sessions', sessionId);
         await deleteDoc(sessionRef);
-        localStorage.removeItem('sessionId');
+      } catch (error) {
+        console.warn("Failed to delete session from Firestore, but logged out locally:", error);
       }
-    } catch (error) {
-      console.error("Failed to delete session from Firestore:", error);
-    } finally {
-      setToken(null);
-      setUser(null);
     }
   };
 
