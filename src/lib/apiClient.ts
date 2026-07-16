@@ -9,22 +9,20 @@ export const api = {
     
     // Check if access code exists in Firestore
     const codeRef = doc(firestoreDb, 'accessCodes', accessCode);
-    const codeSnap = await getDoc(codeRef);
+    let codeSnap = await getDoc(codeRef);
     
     if (!codeSnap.exists()) {
-      // If no codes exist at all, we might want to fallback to the default '108026'
-      // But let's check if '108026' was entered and not used.
+      // Fallback for default demo code
       if (accessCode === '108026') {
         const defaultRef = doc(firestoreDb, 'accessCodes', '108026');
         await setDoc(defaultRef, { code: '108026', used: false, createdAt: new Date().toISOString() });
+        codeSnap = await getDoc(codeRef);
       } else {
         throw new Error('Invalid access code');
       }
     }
     
-    // We get it again just in case we created the default one
-    const finalCodeSnap = await getDoc(codeRef);
-    if (!finalCodeSnap.exists() || finalCodeSnap.data().used) {
+    if (!codeSnap.exists() || codeSnap.data()?.used) {
       throw new Error('Invalid or already used access code');
     }
     
