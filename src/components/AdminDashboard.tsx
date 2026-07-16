@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { KeyRound, Plus, Users, Globe, Clock, Loader2, MapPin, Hash, Phone, Map } from 'lucide-react';
 import { api } from '../lib/apiClient';
+import { Users, KeyRound, Plus, Loader2, Clock, MapPin, Map, Phone, Hash, Globe } from 'lucide-react';
 
 export function AdminDashboard() {
   const { token } = useAuth();
@@ -14,34 +14,40 @@ export function AdminDashboard() {
   const [generatingCode, setGeneratingCode] = useState(false);
 
   useEffect(() => {
-    let unsubscribeDocs: (() => void) | undefined;
-    let unsubscribeCodes: (() => void) | undefined;
-
-    try {
-      setLoading(true);
-      unsubscribeDocs = api.subscribeAdminDocuments((docsData) => {
-        setDocuments(docsData);
-      });
-      unsubscribeCodes = api.subscribeAccessCodes((codesData) => {
-        setAccessCodes(codesData.reverse());
-      });
-      setLoading(false);
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-
+    let mounted = true;
+    const fetchData = async () => {
+      try {
+        const [docsData, codesData] = await Promise.all([
+          api.getAdminDocuments(),
+          api.getAccessCodes()
+        ]);
+        if (mounted) {
+          setDocuments(docsData);
+          setAccessCodes(codesData.codes.reverse());
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (mounted) {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
+    };
+    
+    fetchData();
+    const interval = setInterval(fetchData, 3000); // sync every 3 seconds
+    
     return () => {
-      if (unsubscribeDocs) unsubscribeDocs();
-      if (unsubscribeCodes) unsubscribeCodes();
+      mounted = false;
+      clearInterval(interval);
     };
   }, [token]);
 
   const generateAccessCode = async () => {
     try {
       setGeneratingCode(true);
-      await api.generateAccessCode();
-      // Code list is now automatically updated by the listener
+      const data = await api.generateAccessCode();
+      setAccessCodes(prev => [data.code, ...prev]);
     } catch (err: any) {
       alert(err.message);
     } finally {
