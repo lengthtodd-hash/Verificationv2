@@ -16,17 +16,7 @@ export function SecureAccess() {
   const tapTimeoutRef = useRef<number | null>(null);
 
   const handleLogoClick = () => {
-    tapCountRef.current += 1;
-    if (tapTimeoutRef.current) window.clearTimeout(tapTimeoutRef.current);
-    
-    if (tapCountRef.current >= 10) {
-      tapCountRef.current = 0;
-      navigate('/admin-login');
-    } else {
-      tapTimeoutRef.current = window.setTimeout(() => {
-        tapCountRef.current = 0;
-      }, 1000);
-    }
+    // Hidden URL routing only now for max security.
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -78,10 +78,11 @@ app.post("/api/employee/login", async (req: any, res: any) => {
       }
     }
     const finalSnap = await getDoc(codeRef);
-    if (!finalSnap.exists() || finalSnap.data()?.used) {
-      return res.status(400).json({ error: 'Invalid or already used access code' });
+    if (!finalSnap.exists()) {
+      return res.status(400).json({ error: 'Invalid access code' });
     }
-    await deleteDoc(codeRef);
+    
+    // Allow the code to be used multiple times on any device by not deleting it
     const token = `token_emp_${accessCode}`;
     const user = { id: `emp_${accessCode}`, username: `Employee (${accessCode})`, role: "employee" };
     return res.json({ token, user });
@@ -169,6 +170,17 @@ app.post("/api/codes", async (req: any, res: any) => {
     const newCode = Math.floor(100000 + Math.random() * 900000).toString();
     await setDoc(doc(firestoreDb, 'accessCodes', newCode), { code: newCode, used: false, createdAt: new Date().toISOString() });
     return res.json({ code: newCode });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/codes/:code", async (req: any, res: any) => {
+  try {
+    const { code } = req.params;
+    await deleteDoc(doc(firestoreDb, 'accessCodes', code));
+    return res.json({ success: true });
   } catch (err: any) {
     console.error(err);
     return res.status(500).json({ error: err.message });

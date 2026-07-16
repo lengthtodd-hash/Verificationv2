@@ -57,6 +57,14 @@ export function AdminDashboard() {
     }
   };
 
+  const handleDeleteCode = async (code: string) => {
+    try {
+      await api.deleteAccessCode(code);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (loading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-8 w-8 text-indigo-500 animate-spin" /></div>;
   }
@@ -113,14 +121,22 @@ export function AdminDashboard() {
               ) : (
                 <ul className="space-y-2">
                   {accessCodes.map(code => (
-                    <li key={code} className="text-sm font-mono bg-white px-3 py-2 border border-gray-200 rounded-md shadow-sm text-center flex justify-between items-center">
+                    <li key={code} className="text-sm font-mono bg-white px-3 py-2 border border-gray-200 rounded-md shadow-sm flex justify-between items-center">
                       <span>{code}</span>
-                      <button 
-                        onClick={() => navigator.clipboard.writeText(code)}
-                        className="text-indigo-600 hover:text-indigo-800 text-xs font-sans font-medium"
-                      >
-                        Copy
-                      </button>
+                      <div className="flex space-x-3">
+                        <button 
+                          onClick={() => navigator.clipboard.writeText(code)}
+                          className="text-indigo-600 hover:text-indigo-800 text-xs font-sans font-medium"
+                        >
+                          Copy
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteCode(code)}
+                          className="text-red-600 hover:text-red-800 text-xs font-sans font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

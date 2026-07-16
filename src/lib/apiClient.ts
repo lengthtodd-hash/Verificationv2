@@ -68,6 +68,15 @@ export const api = {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Generate failed');
     return data;
+  },
+  
+  deleteAccessCode: async (code: string) => {
+    const res = await fetch(`/api/codes/${code}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Delete failed');
+    return data;
   }
 };
 
