@@ -20,7 +20,7 @@ export function AdminLogin() {
 
     try {
       const data = await api.adminLogin(username, password);
-      login(data.token, data.user);
+      await login(data.token, data.user);
       navigate('/admin');
     } catch (err: any) {
       setError(err.message || 'Login failed');

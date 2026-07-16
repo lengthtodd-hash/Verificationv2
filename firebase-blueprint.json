@@ -1,47 +1,59 @@
 {
-  "collections": [
-    {
-      "name": "accessCodes",
-      "rules": [
-        {
-          "allow": ["read", "write"],
-          "condition": "true"
-        }
-      ],
-      "schema": {
-        "type": "object",
-        "properties": {
-          "code": { "type": "string" },
-          "createdAt": { "type": "string" },
-          "used": { "type": "boolean" }
-        },
-        "required": ["code", "used"]
-      }
+  "entities": {
+    "AccessCode": {
+      "title": "AccessCode",
+      "description": "Secure 6-digit employee access codes",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "used": { "type": "boolean" }
+      },
+      "required": ["code", "used"]
     },
-    {
-      "name": "documents",
-      "rules": [
-        {
-          "allow": ["read", "write"],
-          "condition": "true"
-        }
-      ],
-      "schema": {
-        "type": "object",
-        "properties": {
-          "userId": { "type": "string" },
-          "username": { "type": "string" },
-          "status": { "type": "string" },
-          "submittedAt": { "type": "string" },
-          "ipAddress": { "type": "string" },
-          "fullName": { "type": "string" },
-          "phoneNumber": { "type": "string" },
-          "streetAddress": { "type": "string" },
-          "zipCode": { "type": "string" },
-          "fileUrl": { "type": "string" }
-        },
-        "required": ["userId", "username", "status"]
-      }
+    "Document": {
+      "title": "Document",
+      "description": "Submitted employment documents",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "username": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "streetAddress": { "type": "string" },
+        "zipCode": { "type": "string" },
+        "fileUrl": { "type": "string" }
+      },
+      "required": ["userId", "username", "status"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Synchronized active user login sessions",
+      "type": "object",
+      "properties": {
+        "token": { "type": "string" },
+        "user": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["token", "user", "createdAt"]
     }
-  ]
+  },
+  "firestore": {
+    "accessCodes/{codeId}": {
+      "schema": "AccessCode",
+      "description": "Employee single-use access codes"
+    },
+    "documents/{documentId}": {
+      "schema": "Document",
+      "description": "Employee submitted documents"
+    },
+    "sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Active web sessions for cross-device state"
+    }
+  }
 }

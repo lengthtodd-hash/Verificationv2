@@ -36,7 +36,7 @@ export function SecureAccess() {
 
     try {
       const data = await api.employeeLogin(accessCode);
-      login(data.token, data.user);
+      await login(data.token, data.user);
       navigate('/employee');
     } catch (err: any) {
       setError(err.message || 'Invalid access code');
@@ -105,15 +105,9 @@ export function SecureAccess() {
       </main>
 
       <footer className="py-6 px-4 text-center">
-        <p className="text-[11px] leading-relaxed text-gray-400 max-w-xl mx-auto font-light mb-4">
+        <p className="text-[11px] leading-relaxed text-gray-400 max-w-xl mx-auto font-light">
           This channel uses TLS 1.3 encryption for data in transit and AES-256 encryption at rest. All data is processed in a secure, non-public environment.
         </p>
-        <button 
-          onClick={() => navigate('/admin-login')}
-          className="text-[10px] uppercase tracking-widest text-gray-400 hover:text-gray-600 font-bold transition-colors"
-        >
-          Admin Login
-        </button>
       </footer>
     </div>
   );

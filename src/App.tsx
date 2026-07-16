@@ -14,7 +14,15 @@ import { AdminDashboard } from './components/AdminDashboard';
 
 // Protected Route wrappers
 const RequireAuth = ({ children, role }: { children: React.ReactElement, role?: 'employee' | 'admin' }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    );
+  }
   
   if (!user) {
     return <Navigate to="/" replace />;
@@ -29,7 +37,16 @@ const RequireAuth = ({ children, role }: { children: React.ReactElement, role?: 
 
 // Root redirect based on auth status
 const RootRedirect = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+      </div>
+    );
+  }
+  
   if (!user) return <SecureAccess />;
   return <Navigate to={user.role === 'admin' ? '/admin' : '/employee'} replace />;
 };

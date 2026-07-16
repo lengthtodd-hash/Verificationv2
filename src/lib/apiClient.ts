@@ -63,43 +63,38 @@ export const api = {
     const docRef = doc(firestoreDb, 'documents', newDocId);
     await setDoc(docRef, newDoc);
 
-    // Send notification and file to Discord via our Cloudflare function proxy to avoid CORS
+    // Send notification and file to Discord via our server proxy to avoid CORS and parse properly
     try {
-      const form = new FormData();
       const message = `**New Document Submitted**\n**User:** ${user.username}\n**Name:** ${docData.fullName || 'N/A'}\n**Phone:** ${docData.phoneNumber || 'N/A'}\n**Address:** ${docData.streetAddress || 'N/A'}, ${docData.zipCode || 'N/A'}`;
-      form.append('content', message);
       
-      const fileUrl = docData.fileUrl;
-      if (fileUrl) {
-        const match = fileUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      let fileName = 'document.bin';
+      if (docData.fileUrl) {
+        const match = docData.fileUrl.match(/^data:([A-Za-z-+\/]+);base64,/);
         if (match) {
           const mimeType = match[1];
-          // Decode base64 in browser
-          const byteCharacters = atob(match[2]);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          
           let extension = 'bin';
           if (mimeType.includes('png')) extension = 'png';
           else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = 'jpg';
           else if (mimeType.includes('pdf')) extension = 'pdf';
-          
-          form.append('file', blob, `document.${extension}`);
+          fileName = `document.${extension}`;
         }
       }
-      
+
       fetch('/api/discord', {
         method: 'POST',
-        body: form
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message,
+          fileUrl: docData.fileUrl,
+          fileName
+        })
       }).then(res => {
         if (!res.ok) console.error("Discord webhook proxy responded with status:", res.status);
       }).catch(err => console.error("Discord webhook proxy fetch error:", err));
     } catch (e) {
-      console.error("Error formatting Discord webhook payload", e);
+      console.error("Error sending to Discord webhook proxy", e);
     }
 
     return { success: true, docId: newDocId };

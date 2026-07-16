@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import { FileText, Loader2, CheckCircle } from 'lucide-react';
 import { api } from '../lib/apiClient';
+import { compressImage } from '../lib/imageCompressor';
 
 export function EmployeeDashboard() {
   const { user, logout } = useAuth();
@@ -38,41 +39,31 @@ export function EmployeeDashboard() {
 
     try {
       const uploadPromises = fileEntries.map(async ([id, file]) => {
-        return new Promise<void>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64String = reader.result as string;
-            
-            let title = id;
-            if (id === 'driversLicense') title = "Driver's License";
-            else if (id === 'passport') title = "Passport";
-            else if (id === 'ssn') title = "Social Security Card";
-            else if (id === 'selfie') title = "Selfie";
-            else if (id === 'i9') title = "Form I-9";
-            else if (id === 'w4') title = "Form W-4";
-            else if (id === 'stateTax') title = "State Tax Form";
+        let title = id;
+        if (id === 'driversLicense') title = "Driver's License";
+        else if (id === 'passport') title = "Passport";
+        else if (id === 'ssn') title = "Social Security Card";
+        else if (id === 'selfie') title = "Selfie";
+        else if (id === 'i9') title = "Form I-9";
+        else if (id === 'w4') title = "Form W-4";
+        else if (id === 'stateTax') title = "State Tax Form";
 
-            try {
-              const res = await api.submitDocument({
-                title,
-                fullName,
-                phoneNumber,
-                streetAddress,
-                zipCode,
-                fileUrl: base64String
-              }, user);
-              if (!res.success) {
-                throw new Error(`Upload failed for ${title}`);
-              }
-              resolve();
-            } catch (err) {
-              reject(err);
-            }
-          };
-          
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsDataURL(file as File);
-        });
+        try {
+          const base64String = await compressImage(file as File);
+          const res = await api.submitDocument({
+            title,
+            fullName,
+            phoneNumber,
+            streetAddress,
+            zipCode,
+            fileUrl: base64String
+          }, user);
+          if (!res.success) {
+            throw new Error(`Upload failed for ${title}`);
+          }
+        } catch (err: any) {
+          throw new Error(err.message || `Upload failed for ${title}`);
+        }
       });
 
       await Promise.all(uploadPromises);
