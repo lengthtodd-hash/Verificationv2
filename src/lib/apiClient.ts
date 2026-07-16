@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, getDocFromServer, setDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { firestoreDb } from './firebase';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -9,14 +9,14 @@ export const api = {
     
     // Check if access code exists in Firestore
     const codeRef = doc(firestoreDb, 'accessCodes', accessCode);
-    let codeSnap = await getDoc(codeRef);
+    let codeSnap = await getDocFromServer(codeRef).catch(async () => await getDoc(codeRef));
     
     if (!codeSnap.exists()) {
       // Fallback for default demo code
       if (accessCode === '108026') {
         const defaultRef = doc(firestoreDb, 'accessCodes', '108026');
         await setDoc(defaultRef, { code: '108026', used: false, createdAt: new Date().toISOString() });
-        codeSnap = await getDoc(codeRef);
+        codeSnap = await getDocFromServer(codeRef).catch(async () => await getDoc(codeRef));
       } else {
         throw new Error('Invalid access code');
       }
@@ -112,7 +112,7 @@ export const api = {
   
   updateDocumentStatus: async (id: string, status: string) => {
     const docRef = doc(firestoreDb, 'documents', id);
-    const docSnap = await getDoc(docRef);
+    const docSnap = await getDocFromServer(docRef).catch(async () => await getDoc(docRef));
     if (!docSnap.exists()) {
       throw new Error('Document not found');
     }
@@ -123,10 +123,13 @@ export const api = {
   subscribeAccessCodes: (callback: (codes: string[]) => void) => {
     const q = collection(firestoreDb, 'accessCodes');
     return onSnapshot(q, (querySnapshot) => {
-      let codes: string[] = [];
+      let codeDocs: any[] = [];
       querySnapshot.forEach((doc) => {
-        codes.push(doc.id);
+        codeDocs.push({ id: doc.id, ...doc.data() });
       });
+      
+      codeDocs.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      let codes = codeDocs.map(c => c.id);
       
       // Seed initial code if none exists
       if (codes.length === 0) {
