@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { api } from '../lib/apiClient';
-import { Users, KeyRound, Plus, Loader2, Clock, MapPin, Map, Phone, Hash, Globe } from 'lucide-react';
+import { api, updateDocumentStatus } from '../lib/apiClient';
+import { Users, KeyRound, Plus, Loader2, Clock, MapPin, Map, Phone, Hash, Globe, CheckCircle, XCircle } from 'lucide-react';
 
 export function AdminDashboard() {
   const { token } = useAuth();
@@ -14,44 +14,46 @@ export function AdminDashboard() {
   const [generatingCode, setGeneratingCode] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    const fetchData = async () => {
-      try {
-        const [docsData, codesData] = await Promise.all([
-          api.getAdminDocuments(),
-          api.getAccessCodes()
-        ]);
-        if (mounted) {
-          setDocuments(docsData);
-          setAccessCodes(codesData.codes.reverse());
-          setLoading(false);
-        }
-      } catch (err: any) {
-        if (mounted) {
-          setError(err.message);
-          setLoading(false);
-        }
-      }
-    };
-    
-    fetchData();
-    const interval = setInterval(fetchData, 3000); // sync every 3 seconds
-    
+    let unsubscribeDocs: (() => void) | undefined;
+    let unsubscribeCodes: (() => void) | undefined;
+
+    try {
+      setLoading(true);
+      unsubscribeDocs = api.subscribeAdminDocuments((docsData) => {
+        setDocuments(docsData);
+      });
+      unsubscribeCodes = api.subscribeAccessCodes((codesData) => {
+        setAccessCodes(codesData.reverse());
+      });
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message);
+      setLoading(false);
+    }
+
     return () => {
-      mounted = false;
-      clearInterval(interval);
+      if (unsubscribeDocs) unsubscribeDocs();
+      if (unsubscribeCodes) unsubscribeCodes();
     };
   }, [token]);
 
   const generateAccessCode = async () => {
     try {
       setGeneratingCode(true);
-      const data = await api.generateAccessCode();
-      setAccessCodes(prev => [data.code, ...prev]);
+      await api.generateAccessCode();
+      // Code list is automatically updated by the listener
     } catch (err: any) {
       alert(err.message);
     } finally {
       setGeneratingCode(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+      await updateDocumentStatus(id, status);
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -148,7 +150,12 @@ export function AdminDashboard() {
                           </span>
                         </span>
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900">{doc.fullName || 'Unknown Name'}</h4>
+                          <h4 className="text-sm font-bold text-gray-900 flex items-center">
+                            {doc.fullName || 'Unknown Name'}
+                            {doc.status === 'approved' && <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Approved</span>}
+                            {doc.status === 'rejected' && <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">Rejected</span>}
+                            {doc.status === 'pending' && <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">Pending</span>}
+                          </h4>
                           <p className="text-xs text-gray-500 flex items-center mt-1">
                             <Hash className="h-3 w-3 mr-1" />
                             {doc.title}
@@ -167,7 +174,7 @@ export function AdminDashboard() {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
                       <div className="flex items-start">
                         <Phone className="h-4 w-4 text-gray-400 mt-0.5 mr-2" />
                         <div>
@@ -190,6 +197,25 @@ export function AdminDashboard() {
                         </div>
                       </div>
                     </div>
+                    
+                    {doc.status === 'pending' && (
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleUpdateStatus(doc.id, 'rejected')}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <XCircle className="mr-1.5 h-4 w-4 text-gray-400" />
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(doc.id, 'approved')}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-indigo-600 hover:bg-indigo-700"
+                        >
+                          <CheckCircle className="mr-1.5 h-4 w-4" />
+                          Approve
+                        </button>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
