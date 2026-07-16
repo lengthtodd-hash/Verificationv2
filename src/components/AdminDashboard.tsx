@@ -14,31 +14,34 @@ export function AdminDashboard() {
   const [generatingCode, setGeneratingCode] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, [token]);
+    let unsubscribeDocs: (() => void) | undefined;
+    let unsubscribeCodes: (() => void) | undefined;
 
-  const fetchData = async () => {
     try {
       setLoading(true);
-      const [docsData, codesData] = await Promise.all([
-        api.getAdminDocuments(),
-        api.getAccessCodes()
-      ]);
-
-      setDocuments(docsData.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()));
-      setAccessCodes(codesData.codes.reverse());
+      unsubscribeDocs = api.subscribeAdminDocuments((docsData) => {
+        setDocuments(docsData);
+      });
+      unsubscribeCodes = api.subscribeAccessCodes((codesData) => {
+        setAccessCodes(codesData.reverse());
+      });
+      setLoading(false);
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
-  };
+
+    return () => {
+      if (unsubscribeDocs) unsubscribeDocs();
+      if (unsubscribeCodes) unsubscribeCodes();
+    };
+  }, [token]);
 
   const generateAccessCode = async () => {
     try {
       setGeneratingCode(true);
-      const data = await api.generateAccessCode();
-      setAccessCodes(prev => [data.code, ...prev]);
+      await api.generateAccessCode();
+      // Code list is now automatically updated by the listener
     } catch (err: any) {
       alert(err.message);
     } finally {

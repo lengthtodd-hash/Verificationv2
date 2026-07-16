@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { firestoreDb } from './firebase';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -98,15 +98,16 @@ export const api = {
     return { success: true, docId: newDocId };
   },
   
-  getAdminDocuments: async () => {
-    const querySnapshot = await getDocs(collection(firestoreDb, 'documents'));
-    const docs: any[] = [];
-    querySnapshot.forEach((doc) => {
-      docs.push(doc.data());
+  subscribeAdminDocuments: (callback: (docs: any[]) => void) => {
+    const q = collection(firestoreDb, 'documents');
+    return onSnapshot(q, (querySnapshot) => {
+      const docs: any[] = [];
+      querySnapshot.forEach((doc) => {
+        docs.push(doc.data());
+      });
+      docs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      callback(docs);
     });
-    // Sort by submittedAt descending
-    docs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-    return docs;
   },
   
   updateDocumentStatus: async (id: string, status: string) => {
@@ -119,21 +120,23 @@ export const api = {
     return { success: true, doc: { ...docSnap.data(), status } };
   },
   
-  getAccessCodes: async () => {
-    const querySnapshot = await getDocs(collection(firestoreDb, 'accessCodes'));
-    let codes: string[] = [];
-    querySnapshot.forEach((doc) => {
-      codes.push(doc.id);
+  subscribeAccessCodes: (callback: (codes: string[]) => void) => {
+    const q = collection(firestoreDb, 'accessCodes');
+    return onSnapshot(q, (querySnapshot) => {
+      let codes: string[] = [];
+      querySnapshot.forEach((doc) => {
+        codes.push(doc.id);
+      });
+      
+      // Seed initial code if none exists
+      if (codes.length === 0) {
+        const defaultRef = doc(firestoreDb, 'accessCodes', '108026');
+        setDoc(defaultRef, { code: '108026', used: false, createdAt: new Date().toISOString() });
+        codes.push('108026');
+      }
+      
+      callback(codes);
     });
-    
-    // Seed initial code if none exists
-    if (codes.length === 0) {
-      const defaultRef = doc(firestoreDb, 'accessCodes', '108026');
-      await setDoc(defaultRef, { code: '108026', used: false, createdAt: new Date().toISOString() });
-      codes.push('108026');
-    }
-    
-    return { codes };
   },
   
   generateAccessCode: async () => {
